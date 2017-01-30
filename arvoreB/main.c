@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 //definição de um nó.
@@ -7,7 +8,6 @@ typedef struct node{
     int n; 										//Número de chaves
     int *chaves; 						//Vetor de Chaves
     struct node **filhos; 			//Filhos (Vetor de ponteiros)
-    struct node *ifilhos;
     int eFolha; 								//0 = não é folha, 1 = é folha
 }node;
 
@@ -17,6 +17,16 @@ typedef struct bTree{
     node *raiz;
 }bTree;
 
+///Protótipos de funções a serem utilizadas
+void criabTree(bTree *t, int T);
+void divideFilhobTree(node *x, int i, int T);
+node* inserebTree(bTree *t, int k, int T, int *pos);
+node* busca_bTree(node *x, int k, int *pos);
+node* inserebTreeNaoCheio (node *x, int k, int T, int *pos);
+///Fim dos protótipos
+
+
+
 //Função criabTree(bTree *t):
 //Cria a arvore, alocando espaço para o nó raiz, coloca número de elmentos = 0
 void criabTree(bTree *t,int T){
@@ -24,7 +34,7 @@ void criabTree(bTree *t,int T){
 
     x = (node*) calloc(1, sizeof(node)); 	//Aloca primeiro nó
     x->chaves = (int*) calloc(2*T, sizeof(int));//Alocando vetor de chaves
-    x->filhos = (node*) calloc(2*T+1, sizeof(node));//Alocando vetor de ponteiro iFilhos
+    x->filhos = (node**) calloc(2*T+1, sizeof(node*));//Alocando vetor de ponteiro iFilhos
     x->n = 0;									//número de elementos = 0
     x->eFolha = 1;								//eFolha = true
 
@@ -39,7 +49,7 @@ void divideFilhobTree(node *x, int i,int T){
 
     z = (node*) calloc(1, sizeof(node));  	//Aloca espaço para o novo nó
     z->chaves = (int*) calloc(2*T, sizeof(int)); //Alocando vetor de chaves
-    z->filhos = (node*) calloc(2*T+1, sizeof(node));//Alocando vetor de ponteiro iFilhos
+    z->filhos = (node**) calloc(2*T+1, sizeof(node*));//Alocando vetor de ponteiro iFilhos
     y = x->filhos[i];							//troca o filho de X na posição i de lugar
 
     z->eFolha = y->eFolha;						//se o nó original era folha, o novo também será
@@ -76,24 +86,24 @@ void divideFilhobTree(node *x, int i,int T){
 //Essa função é basicamente o controle da inserção de chaves, "decidindo" se a chave será inserida em um nó existente
 //ou se será alocado um novo nó para arrumar a arvore(crescimento da arvore na raiz).
 //RETORNO: A função não tem retorno
-void inserebTree(bTree *t, int k,int T){
+node* inserebTree(bTree *t, int k,int T, int *pos){
     node *r, *s;
 
     r = t->raiz; 								//Definimos r como a raiz da arvore
     if (r->n == 2*T - 1){							//Se a raiz tiver o número maximo de elementos:
         s = (node*) malloc(sizeof(node));//Aloca um novo nó s
         s->chaves = (int*) calloc(2*T, sizeof(int));//Alocando vetor de chaves
-        s->filhos = (node*) calloc(2*T+1, sizeof(node));//Alocando vetor de ponteiro iFilhos
+        s->filhos = (node**) calloc(2*T+1, sizeof(node*));//Alocando vetor de ponteiro iFilhos
         s->eFolha = 0;							//Atribui a ele o estado e não folha
         s->n = 0;								//Atribui a ele o número de elementos zero
         s->filhos[1] = r;						//Torna-se a raiz filha desse novo nó
         t->raiz = s;							//Torna-se esse nó a nova raiz da arvore
 
         divideFilhobTree(s, 1,T);				//Chama-se a função de dividir o nó na posição 1
-        inserebTreeNaoCheio(s, k, T);			//Chama-se a função para inserir a chave k no novo nó que nunca estará cheio (nessa etapa)
+        return inserebTreeNaoCheio(s, k, T, pos);			//Chama-se a função para inserir a chave k no novo nó que nunca estará cheio (nessa etapa)
     }
     else										//Se a raiz não tiver o número maximo de elementos
-        inserebTreeNaoCheio(r, k, T);			//Chama-se a função para inserir a chave k em r já que ela não está cheia
+        return inserebTreeNaoCheio(r, k, T, pos);			//Chama-se a função para inserir a chave k em r já que ela não está cheia
 }
 
 
@@ -101,30 +111,34 @@ void inserebTree(bTree *t, int k,int T){
 //Essa função tem como objetivo buscar uma chave na arvore retornando o nó e a posição em que a chave se encontra
 //RETORNO: A função retorna o nó em que a chave foi encontrada(se foi encontrada) e a posição é passada por referência
 node* busca_bTree(node *x, int k, int *pos){
-    int i = 1;									//Inicializa-se uma variavel index no valor 1 (primeira posição de um nó)
+    int i = 1;
+    if (x->n > 0) {									//Inicializa-se uma variavel index no valor 1 (primeira posição de um nó)
+        while(i <= x->n && k > x->chaves[i]){		//Incrementa-se o i até a chave que ele indexe seja maior que a chave a ser inserida...
+            i += 1;									//... ou até que se chegue na última posição do vetor
+        }
 
-    while(i <= x->n && k > x->chaves[i]){		//Incrementa-se o i até a chave que ele indexe seja maior que a chave a ser inserida...
-        i += 1;									//... ou até que se chegue na última posição do vetor
+        if (i <= x->n && k == x->chaves[i]){		//Se quando a condição acima parar o elemento for a chave busca:
+            *pos = i;								//Retorna-se a posição i por referência
+            /*printf("\n********** Elemento encontrado **********\n");
+            printf("\t\tNumero: %d\n\t\tPosicao: %d\n", x->chaves[*pos], *pos);
+            printf("*****************************************\n");
+            */
+            return x;								//Retorna-se o nó
+
+        }
+        else if (x->eFolha){						//Se não for a chave buscada e o nó for folha
+            *pos = -1;								//Retorna-se -1 como posição por referência
+            /*printf("\n********* Elemento nao encontrado **********\n");
+            */
+            return NULL;							//Retorna-se NULL no lugar do nó, já que a chave não foi encontrada e não há filhos para buscar
+        }
+        else										//Senão busca-se a chave no filho de posição i (já que k seria menor que o elemento seguinte do nó atual)
+            return busca_bTree(x->filhos[i], k, pos);//Chama-se a busca no filho de posição indexada i
     }
-
-    if (i <= x->n && k == x->chaves[i]){		//Se quando a condição acima parar o elemento for a chave busca:
-        *pos = i;								//Retorna-se a posição i por referência
-        /*printf("\n********** Elemento encontrado **********\n");
-        printf("\t\tNumero: %d\n\t\tPosicao: %d\n", x->chaves[*pos], *pos);
-        printf("*****************************************\n");
-        */
-        return x;								//Retorna-se o nó
-
+    else {
+        *pos = -1;
+        return NULL;
     }
-    else if (x->eFolha){						//Se não for a chave buscada e o nó for folha
-        *pos = -1;								//Retorna-se -1 como posição por referência
-        /*printf("\n********* Elemento nao encontrado **********\n");
-        */
-        return NULL;							//Retorna-se NULL no lugar do nó, já que a chave não foi encontrada e não há filhos para buscar
-    }
-    else										//Senão busca-se a chave no filho de posição i (já que k seria menor que o elemento seguinte do nó atual)
-        return busca_bTree(x->filhos[i], k, pos);//Chama-se a busca no filho de posição indexada i
-
 }
 
 
@@ -132,7 +146,7 @@ node* busca_bTree(node *x, int k, int *pos){
 //insere em um nó não cheio
 // É a única função que de fato insere chaves na árvore, pois a função inserebTree faz todas as verificações e divisões
 // e então chama a função inserebTreeNaoCheio
-void inserebTreeNaoCheio (node *x, int k, int T){
+node* inserebTreeNaoCheio (node *x, int k, int T, int *posins){
     int i, pos;
     i = x->n;									//O index i recebe o número de elementos do nó
 
@@ -147,12 +161,8 @@ void inserebTreeNaoCheio (node *x, int k, int T){
             x->chaves[i+1] = k;					//Coloco a chave na posição correta
 			int pos_ins = i+1;
             x->n = (x->n)+1;					//atualiza a quantidade de chaves no nó
-            printf ("Inserido %d no no: ", k);
-            for (i = 0; i < x->n; i++){			//Imprime todas as chaves contidas no nó onde a chave foi inserida
-                printf("%d - ", x->chaves[i+1]);
-            }
-            printf ("Na posicao: %d \n", pos_ins);
-
+            *posins = pos_ins;
+            return x;
 
         }
         else {									//Se o nó x não for folha:
@@ -165,33 +175,88 @@ void inserebTreeNaoCheio (node *x, int k, int T){
                 if (k > x->chaves[i])			//Se a chave a ser inserida for maior que a chave de x na posição i
                     i+= 1;						//Incrementa-se o index para inserir no filho da direita da chave
             }
-            inserebTreeNaoCheio(x->filhos[i], k, T);//insiro na posição correta
+            return inserebTreeNaoCheio(x->filhos[i], k, T, posins);//insiro na posição correta
         }
+    }
+    else {
+        *posins = -1;
+        return NULL;
     }
 }
 
 
 int main(int argc, char *argv[]){
-    int pos;
+    int opt = 0;
     int T;
 
-    scanf("%d",&T);
+    if (argc == 3) {    // se eu passei 3 argumentos por linha de comando (nome do executavel, "-t", e grau minimo
+        if (strcmp(argv[1],"-t") == 0 || strcmp(argv[1], "-T") == 0){ // verifico se o parametro é -t
+            if ( atoi(argv[2])!= 0 ){   // verifico se o grau minimo é um inteiro valido
+                T = atoi(argv[2]);      // se for, já o salvo em T
+            }
+            else {
+                printf("Grau minimo invalido! \n"); //senão, retorno o erro
+                return 2;
+            }
+
+        }
+        else {
+            printf("Entrada invalida, use -t <grau_minimo>\nComando errado.\n");    // retorno o erro caso o primeiro atributo não for -t
+            return 1;
+        }
+    }
+    else {
+        printf("Entrada invalida, use -t <grau_minimo> \nNumero incorreto de argumentos.\n"); //erro caso não tenha o número correto de argumentos
+        return 3;
+    }
 
     bTree arvore;
-    criabTree(&arvore,T);
+    criabTree(&arvore, T);      //crio a arvore com o tamanho definido pelo usuário
 
-    inserebTree(&arvore, 1,T);
-    inserebTree(&arvore, 7,T);
-    inserebTree(&arvore, 9,T);
-    inserebTree(&arvore, 24,T);
-    inserebTree(&arvore, 40,T);
-    inserebTree(&arvore, 41,T);
-    inserebTree(&arvore, 45,T);
-    inserebTree(&arvore, 60,T);
-    inserebTree(&arvore, 75,T);
-    inserebTree(&arvore, 90,T);
-    inserebTree(&arvore, 50,T);
-    inserebTree(&arvore, 65,T);
+    ///Inicio do menu de opções para o usuário
+    printf ("*************************\n*\tbTree\t\t*\n*************************\n");
+
+    do {
+        int aux, aux2; //variaveis auxiliares (terão funções diferentes dependendo do que o usuário deseja fazer)
+        node *noderet; //nó usado para receber onde foi inserida ou encontrada a chave
+        printf("1.Insercao\n2.Busca\n3.Sair do programa\n\nDigite a opcao desejada: ");
+        scanf("%d", &opt);
+        switch(opt){
+        case 1:
+            printf("Digite a chave a ser inserida: ");
+            scanf("%d", &aux);
+            noderet = inserebTree(&arvore, aux, T, &aux2);
+            int i;
+            printf("Inserido na posicao %d do no: \n", aux2);
+            for (i = 0; i < noderet->n; i++){			//Imprime todas as chaves contidas no nó onde a chave foi inserida
+                printf("%d - ", noderet->chaves[i+1]);
+            }
+            printf ("\n\n");
+            break;
+        case 2:
+            printf ("Digite a chave a ser buscada: ");
+            scanf("%d", &aux);
+            noderet = busca_bTree(arvore.raiz, aux, &aux2);
+            if (aux2 != -1){
+                printf ("Encontrado na posicao %d do no: \n", aux2);
+                int i;
+                for (i = 0; i < noderet->n; i++){			//Imprime todas as chaves contidas no nó onde a chave foi inserida
+                    printf("%d - ", noderet->chaves[i+1]);
+                }
+                printf("\n\n");
+            }
+            else {
+                printf("CHAVE NAO ENCONTRADA!\n\n");
+            }
+            break;
+        case 3:
+            printf("Saindo do executavel\n");
+            break;
+        }
+    } while (opt != 3);
+
+    ///Fim do menu de opções
+
 
 
 
