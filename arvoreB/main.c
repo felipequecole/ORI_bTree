@@ -227,9 +227,14 @@ int main(int argc, char *argv[]){
             scanf("%d", &aux);
             noderet = inserebTree(&arvore, aux, T, &aux2);
             int i;
-            printf("Inserido na posicao %d do no: \n", aux2);
-            for (i = 0; i < noderet->n; i++){			//Imprime todas as chaves contidas no nó onde a chave foi inserida
-                printf("%d - ", noderet->chaves[i+1]);
+            if (aux2 != -1){
+                printf("Inserido na posicao %d do no: \n", aux2);
+                for (i = 0; i < noderet->n; i++){			//Imprime todas as chaves contidas no nó onde a chave foi inserida
+                    printf("%d - ", noderet->chaves[i+1]);
+                }
+            }
+            else {
+                printf("Chave existente!");
             }
             printf ("\n\n");
             break;
